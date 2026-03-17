@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevOps Helper</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; background: #f5f7fa; color: #1f2937; }
+    h1, h2 { margin-bottom: 0.5rem; }
+    .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
+    input, select, textarea, button { width: 100%; box-sizing: border-box; margin: 0.25rem 0; padding: 0.5rem; }
+    button { width: auto; cursor: pointer; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .flash { padding: 0.5rem; border-radius: 6px; margin-bottom: 0.5rem; }
+    .flash.error { background: #fee2e2; }
+    .flash.success { background: #dcfce7; }
+    .muted { color: #6b7280; font-size: 0.95rem; }
+    @media (max-width: 800px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>DevOps Helper</h1>
+  <p class="muted">Internal-only operational utility dashboard.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card">
+    <h2>Server Uptime</h2>
+    <p><strong>{{ uptime }}</strong></p>
+  </div>
+
+  <div class="card">
+    <h2>Deployment Log Search</h2>
+    <form method="get" action="{{ url_for('index') }}">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search logs by env/service/level/message">
+      <button type="submit">Search</button>
+    </form>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Env</th><th>Service</th><th>Level</th><th>Message</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        {% for row in logs %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td>{{ row.environment }}</td>
+          <td>{{ row.service }}</td>
+          <td>{{ row.level }}</td>
+          <td>{{ row.message }}</td>
+          <td>{{ row.created_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No logs found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h2>Diagnostics</h2>
+      <form method="post" action="{{ url_for('run_diagnostic') }}">
+        <select name="command_key" required>
+          {% for key, cmd in diagnostics.items() %}
+          <option value="{{ key }}">{{ key }} - {{ cmd }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Run Command</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Environment Variables</h2>
+      <form method="post" action="{{ url_for('save_env') }}">
+        <input type="text" name="key" placeholder="KEY" required>
+        <input type="text" name="value" placeholder="value">
+        <button type="submit">Save</button>
+      </form>
+      <table>
+        <thead><tr><th>Key</th><th>Value</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for key, value in env_pairs %}
+          <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+            <td>
+              <form method="post" action="{{ url_for('delete_env') }}">
+                <input type="hidden" name="key" value="{{ key }}">
+                <button type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3">No environment variables yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h2>Create Message Template</h2>
+      <form method="post" action="{{ url_for('create_template') }}">
+        <input type="text" name="name" placeholder="template_name" required>
+        <textarea name="body" rows="8" placeholder="Deployment {{ service }} finished for {{ env }}" required></textarea>
+        <button type="submit">Create Template</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Render Template</h2>
+      <form method="post" action="{{ url_for('render_message_template') }}">
+        <select name="template_id" required>
+          <option value="">Select a template</option>
+          {% for tpl in templates %}
+          <option value="{{ tpl.id }}">{{ tpl.name }}</option>
+          {% endfor %}
+        </select>
+        <textarea name="context" rows="8" placeholder="service=api&#10;env=prod"></textarea>
+        <button type="submit">Render</button>
+      </form>
+      <p class="muted">Context format: one key=value pair per line.</p>
+    </div>
+  </div>
+</body>
+</html>
