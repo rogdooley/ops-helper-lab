@@ -146,7 +146,7 @@ venv.bak/
 
 # ignore everything inside any dir ending with .db
 **/*.db/**    
-
+*.db
 
 # Spyder project settings
 .spyderproject
